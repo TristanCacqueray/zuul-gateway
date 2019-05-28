@@ -75,7 +75,7 @@ class Service:
     token = "WCL92MLWMRPGKBQ5LI0LZCSIS4TRQMHR0Q"
     zuul = "http://localhost:9000/api/connection/virtual/payload"
     project = "gateway"
-    jobs = {}  # type: Dict[int, str]
+    jobs = {}  # type: Dict[int, Dict]
 
     def sendPayload(topic: str, body: Dict[str, Dict]):
         payload = dict(msg_id=str(uuid.uuid4()), topic=topic, msg=body)
@@ -101,7 +101,7 @@ class Service:
             author = "Zuul Gateway <zuul@localhost>"
         if not title:
             title = "Trigger event"
-        Service.jobs[nr] = "pending"
+        Service.jobs[nr] = {"status": "pending"}
         Service.git.add("refs/pull/%d/head" % nr, author, title,
                         {"zuul.yaml": json.dumps(zuul).encode('ascii')})
         Service.sendPayload("pull-request.new", dict(pullrequest=dict(
@@ -125,27 +125,30 @@ class Service:
         except Exception as e:
             return "KO: %s" % str(e)
 
-    @app.route("/<project>/HEAD")
-    def head(project: str) -> str:
+    @app.route("/<proj>/HEAD")
+    def head(proj: str) -> str:
         return "ref: refs/heads/master"
 
-    @app.route("/<project>/info/refs")
-    def refs(project: str) -> str:
+    @app.route("/<proj>/info/refs")
+    def refs(proj: str) -> str:
         return Service.git.list()
 
-    @app.route("/<project>/objects/<nib>/<rest>")
-    def objects(project: str, nib: str, rest: str) -> bytes:
+    @app.route("/<proj>/objects/<nib>/<rest>")
+    def objects(proj: str, nib: str, rest: str) -> bytes:
         return Service.git.objects[nib][rest]
 
-    @app.route("/api/0/<project>/pull-request/<pr>")
-    @app.route("/api/0/<project>/pull-request/<pr>/diffstats")
-    @app.route("/api/0/<project>/pull-request/<pr>/flag")
-    @app.route("/api/0/<project>/pull-request/<pr>/comment", methods=['POST'])
-    def pr(project: str, pr: str) -> Dict[str, str]:
-        if flask.request.form:
-            Service.jobs[int(pr)] = flask.request.form["comment"]
+    @app.route("/api/0/<proj>/pull-request/<pr>")
+    @app.route("/api/0/<proj>/pull-request/<pr>/diffstats")
+    @app.route("/api/0/<proj>/pull-request/<pr>/flag", methods=['GET', 'POST'])
+    @app.route("/api/0/<proj>/pull-request/<pr>/comment", methods=['POST'])
+    def pr(proj: str, pr: str) -> Dict[str, str]:
+        if flask.request.form and flask.request.form.get("status"):
+            Service.jobs[int(pr)]["status"] = flask.request.form["status"]
+        elif flask.request.form and flask.request.form.get("comment"):
+            Service.jobs[int(pr)]["comment"] = flask.request.form["comment"]
         return flask.jsonify({"status": "Open", "branch": "master",
-                              "flags": None, "zuul.yaml": "yes"})
+                              "commit_stop": 1, "flags": None,
+                              "zuul.yaml": "yes"})
 
     @app.route("/<path:subpath>", methods=['GET', 'POST', 'PUT'])
     def api(subpath: str) -> Dict:
