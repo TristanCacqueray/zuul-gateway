@@ -52,10 +52,17 @@ FLASK_APP=gateway.py flask run
 ## Trigger a job
 
 ```
-$ curl -X POST --header "Content-Type: application/json" \
-    -d '{"job": "rpm-lint", "vars": {"rpm-url": "http://koji/test.rpm"}}' \
-    http://127.0.0.1:5000/jobs
-OK: 1
+$ cat <<EOF>zuul.yaml
+- project:
+    check:
+      jobs:
+        - rpm-lint
+    vars:
+      rpm_url: http://koji.example.com/test.rpm
+EOF
+$ curl -X POST --header "Content-Type: application/yaml" \
+    --data-binary @zuul.yaml http://127.0.0.1:5000/jobs/rpm-lint-test
+{"status":"pending"}
 $ curl http://127.0.0.1:5000/jobs
-{"1":"Build succeeded.\n\n- [rpm-lint](https://sftests.com/logs/1/1/None/check/rpm-lint/5125e93/) : SUCCESS in 40s\n"}
+{"rpm-lint-test": {"comment": "Build succeeded.\n\n- [rpm-lint](https://sftests.com/logs/1/1/None/check/rpm-lint/5125e93/) : SUCCESS in 40s\n", "status": "success"}
 ```

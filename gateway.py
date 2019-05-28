@@ -75,7 +75,7 @@ class Service:
     token = "WCL92MLWMRPGKBQ5LI0LZCSIS4TRQMHR0Q"
     zuul = "http://localhost:9000/api/connection/virtual/payload"
     project = "gateway"
-    jobs = {}  # type: Dict[int, Dict]
+    jobs = {}  # type: Dict[str, Dict[str, str]]
 
     def sendPayload(topic: str, body: Dict[str, Dict]):
         payload = dict(msg_id=str(uuid.uuid4()), topic=topic, msg=body)
@@ -89,41 +89,30 @@ class Service:
             raise RuntimeError(
                 "Failure to send payload: %s %s" % (str(req), req.text))
 
-    def trigger(job, title=None, author=None, nodeset=None, vars=None):
-        nr = max(Service.jobs.keys()) + 1 if Service.jobs else 1
-        jobParams = {}
-        if nodeset:
-            jobParams["nodeset"] = nodeset
-        if vars:
-            jobParams["vars"] = vars
-        zuul = [dict(project=dict(check=dict(jobs=[{job: jobParams}])))]
+    def trigger(job: str, zuul: bytes, author: str = None):
         if not author:
             author = "Zuul Gateway <zuul@localhost>"
-        if not title:
-            title = "Trigger event"
-        Service.jobs[nr] = {"status": "pending"}
-        Service.git.add("refs/pull/%d/head" % nr, author, title,
-                        {"zuul.yaml": json.dumps(zuul).encode('ascii')})
+        Service.jobs[job] = {"status": "pending"}
+        Service.git.add("refs/pull/%s/head" % job, author, "Trigger event",
+                        {"zuul.yaml": zuul})
         Service.sendPayload("pull-request.new", dict(pullrequest=dict(
             branch='master',
             comments=[],
-            id=nr,
+            id=job,
             commit_stop=1,
             project=dict(name=Service.project),
             status=True,
-            title=title)))
-        return nr
+            title="Trigger event")))
 
     @app.route("/jobs")
     def jobsList() -> Dict[int, str]:
         return flask.jsonify(Service.jobs)
 
-    @app.route("/jobs", methods=['POST'])
-    def jobsTrigger() -> str:
-        try:
-            return "OK: %d" % Service.trigger(**flask.request.json)
-        except Exception as e:
-            return "KO: %s" % str(e)
+    @app.route("/jobs/<name>", methods=['GET', 'POST'])
+    def jobsTrigger(name: str) -> Dict[str, str]:
+        if flask.request.method == 'POST':
+            Service.trigger(name, flask.request.data)
+        return flask.jsonify(Service.jobs[name])
 
     @app.route("/<proj>/HEAD")
     def head(proj: str) -> str:
@@ -143,9 +132,9 @@ class Service:
     @app.route("/api/0/<proj>/pull-request/<pr>/comment", methods=['POST'])
     def pr(proj: str, pr: str) -> Dict[str, str]:
         if flask.request.form and flask.request.form.get("status"):
-            Service.jobs[int(pr)]["status"] = flask.request.form["status"]
+            Service.jobs[pr]["status"] = flask.request.form["status"]
         elif flask.request.form and flask.request.form.get("comment"):
-            Service.jobs[int(pr)]["comment"] = flask.request.form["comment"]
+            Service.jobs[pr]["comment"] = flask.request.form["comment"]
         return flask.jsonify({"status": "Open", "branch": "master",
                               "commit_stop": 1, "flags": None,
                               "zuul.yaml": "yes"})
