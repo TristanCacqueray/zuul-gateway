@@ -46,10 +46,28 @@ class GatewayTestCase(unittest.TestCase):
     def test_project_ref(self):
         resp = self.app.get('/gateway/info/refs')
         assert '200 OK' == resp.status
-        assert resp.data.endswith(b'\trefs/heads/master\n')
+        assert b'\trefs/heads/master\n' in resp.data
         ref = resp.data.split()[0].decode('ascii')
         resp = self.app.get('/gateway/objects/{}/{}'.format(ref[:2], ref[2:]))
         assert '200 OK' == resp.status
+
+    def test_add_jobs(self):
+        self.app.sendPayload = lambda x, y: None
+        resp = self.app.post('/jobs/test')
+        assert '200 OK' == resp.status
+        assert {"status": "pending"} == resp.json
+        resp = self.app.get('/gateway/info/refs')
+        assert b'\trefs/refs/pull/test/head\n' in resp.data
+        assert '200 OK' == resp.status
+        resp = self.app.get('/jobs/test')
+        assert '200 OK' == resp.status
+        assert {"status": "pending"} == resp.json
+        resp = self.app.delete('/jobs/test')
+        assert '200 OK' == resp.status
+        assert {"status": "removed"} == resp.json
+        resp = self.app.get('/jobs/test')
+        assert '200 OK' == resp.status
+        assert {} == resp.json
 
 
 if __name__ == '__main__':

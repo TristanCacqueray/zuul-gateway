@@ -62,7 +62,7 @@ class VirtualGit:
             for fileName, blob in blobs])))
 
         parent = "" if name.startswith("heads") else "\nparent %s" % (
-            self.refs["refs/heads/master"])
+            self.refs["refs/heads/master"][0])
 
         commit = addObject(encode("commit", ("\n".join([
             "tree {tree}" + parent,
@@ -111,11 +111,15 @@ class Service:
     def jobsList() -> Dict[int, str]:
         return flask.jsonify(Service.jobs)
 
-    @app.route("/jobs/<name>", methods=['GET', 'POST'])
+    @app.route("/jobs/<name>", methods=['GET', 'POST', 'DELETE'])
     def jobsTrigger(name: str) -> Dict[str, str]:
         if flask.request.method == 'POST':
             Service.trigger(name, flask.request.data)
-        return flask.jsonify(Service.jobs[name])
+        elif flask.request.method == 'DELETE':
+            del Service.jobs[name]
+            Service.git.delete("refs/pull/%s/head" % name)
+            return flask.jsonify({"status": "removed"})
+        return flask.jsonify(Service.jobs.get(name, {}))
 
     @app.route("/<proj>/HEAD")
     def head(proj: str) -> str:
