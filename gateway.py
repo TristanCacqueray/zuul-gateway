@@ -144,3 +144,7 @@ class Service:
                                   branches=["master"],
                                   connector=dict(api_tokens=[token],
                                                  hook_token=Service.token)))
+
+
+def main():
+    ...
