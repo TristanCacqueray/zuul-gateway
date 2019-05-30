@@ -97,11 +97,8 @@ class Service:
                         {"zuul.yaml": zuul})
         Service.sendPayload("pull-request.new", dict(pullrequest=dict(
             branch='master',
-            comments=[],
             id=job,
-            commit_stop=1,
             project=dict(name=Service.project),
-            status=True,
             title="Trigger event")))
 
     @app.route("/jobs")
