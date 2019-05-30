@@ -18,7 +18,7 @@ import time
 import uuid
 
 from hashlib import sha1
-from typing import Dict
+from typing import Dict, List
 from zlib import compress
 
 import flask
@@ -29,12 +29,17 @@ app = flask.Flask(__name__)
 
 class VirtualGit:
     def __init__(self):
-        self.refs = {}  # type: Dict[str, str]
+        self.refs = {}  # type: Dict[str, List[str]]
         self.objects = {}  # type: Dict[str, bytes]
         self.add("heads/master", "Zuul <z@local>", "init", {"README": b""})
 
     def list(self) -> str:
-        return "\n".join([v + "\t" + k for k, v in self.refs.items()]) + "\n"
+        return "\n".join([v[0] + "\t" + k for k, v in self.refs.items()])
+
+    def delete(self, name: str):
+        for object in self.refs["refs/" + name]:
+            del self.objects[object]
+        del self.refs["refs/" + name]
 
     def add(self, name: str, author: str, title: str, files: Dict[str, bytes]):
         def encode(obj: str, data: bytes) -> bytes:
@@ -45,10 +50,11 @@ class VirtualGit:
             self.objects[hash] = compress(data)
             return hash
 
+        objects = []
         blobs = []
         for fileName, fileContent in files.items():
             blob = encode("blob", fileContent)
-            addObject(blob)
+            objects.append(addObject(blob))
             blobs.append((fileName, sha1(blob).digest()))
 
         tree = addObject(encode("tree", b"".join([
@@ -66,7 +72,7 @@ class VirtualGit:
             "%s\n" % title
         ])).format(author=author + " %d +0000" % time.time(),
                    tree=tree).encode('ascii')))
-        self.refs["refs/" + name] = commit
+        self.refs["refs/" + name] = [commit, tree] + objects
 
 
 class Service:
@@ -117,7 +123,7 @@ class Service:
 
     @app.route("/<proj>/info/refs")
     def refs(proj: str) -> str:
-        return Service.git.list()
+        return Service.git.list() + "\n"
 
     @app.route("/<proj>/objects/<nib>/<rest>")
     def objects(proj: str, nib: str, rest: str) -> bytes:

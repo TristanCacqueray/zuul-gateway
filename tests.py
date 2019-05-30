@@ -27,7 +27,10 @@ class VirtualGitTestCase(unittest.TestCase):
         self.git.add("test", "test", "test", {})
         assert 2 == len(self.git.refs)
         assert "refs/test" in self.git.refs
-        assert 3 == len(self.git.list().split('\n'))
+        assert 2 == len(self.git.list().split('\n'))
+        self.git.delete("test")
+        assert 1 == len(self.git.refs)
+        assert 3 == len(self.git.objects)
 
 
 class GatewayTestCase(unittest.TestCase):
