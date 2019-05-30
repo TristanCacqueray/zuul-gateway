@@ -30,7 +30,7 @@ app = flask.Flask(__name__)
 class VirtualGit:
     def __init__(self):
         self.refs = {}  # type: Dict[str, str]
-        self.objects = {}  # type: Dict[str, Dict[str, bytes]]
+        self.objects = {}  # type: Dict[str, bytes]
         self.add("heads/master", "Zuul <z@local>", "init", {"README": b""})
 
     def list(self) -> str:
@@ -42,7 +42,7 @@ class VirtualGit:
 
         def addObject(data: bytes) -> str:
             hash = sha1(data).hexdigest()
-            self.objects.setdefault(hash[:2], {})[hash[2:]] = compress(data)
+            self.objects[hash] = compress(data)
             return hash
 
         blobs = []
@@ -121,7 +121,7 @@ class Service:
 
     @app.route("/<proj>/objects/<nib>/<rest>")
     def objects(proj: str, nib: str, rest: str) -> bytes:
-        return Service.git.objects[nib][rest]
+        return Service.git.objects[nib + rest]
 
     @app.route("/api/0/<proj>/pull-request/<pr>")
     @app.route("/api/0/<proj>/pull-request/<pr>/diffstats")
