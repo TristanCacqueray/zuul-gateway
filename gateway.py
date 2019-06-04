@@ -104,7 +104,8 @@ class Service:
     def trigger(job: str, zuul: bytes, author: str = None):
         if not author:
             author = "Zuul Gateway <zuul@localhost>"
-        Service.jobs[job] = {"status": "pending"}
+        Service.jobs[job] = {
+            "status": "pending", "conf": json.loads(zuul.decode('utf-8'))}
         Service.git.add("refs/pull/%s/head" % job, author, "Trigger event",
                         {"zuul.yaml": zuul})
         Service.sendPayload("pull-request.new", dict(pullrequest=dict(

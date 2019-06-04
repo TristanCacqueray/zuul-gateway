@@ -53,15 +53,15 @@ class GatewayTestCase(unittest.TestCase):
 
     def test_add_jobs(self):
         self.app.sendPayload = lambda x, y: None
-        resp = self.app.post('/jobs/test')
+        resp = self.app.post('/jobs/test', data='[]')
         assert '200 OK' == resp.status
-        assert {"status": "pending"} == resp.json
+        assert {"status": "pending", "conf": []} == resp.json
         resp = self.app.get('/gateway/info/refs')
         assert b'\trefs/refs/pull/test/head\n' in resp.data
         assert '200 OK' == resp.status
         resp = self.app.get('/jobs/test')
         assert '200 OK' == resp.status
-        assert {"status": "pending"} == resp.json
+        assert {"status": "pending", "conf": []} == resp.json
         resp = self.app.delete('/jobs/test')
         assert '200 OK' == resp.status
         assert {"status": "removed"} == resp.json
