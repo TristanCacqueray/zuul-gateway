@@ -80,6 +80,8 @@ class Service:
     # token = "".join([random.choice(string.ascii_letters) for _ in range(34)])
     token = "WCL92MLWMRPGKBQ5LI0LZCSIS4TRQMHR0Q"
     zuul = "http://localhost:9000/api/connection/virtual/payload"
+    builds = "http://localhost:9000/api/tenant/local/builds"
+    build_page = "http://localhost:9000/t/tenant/local/build/"
     project = "gateway"
     jobs = {}  # type: Dict[str, Dict[str, str]]
 
@@ -132,6 +134,16 @@ class Service:
     @app.route("/<proj>/objects/<nib>/<rest>")
     def objects(proj: str, nib: str, rest: str) -> bytes:
         return Service.git.objects[nib + rest]
+
+    @app.route("/<proj>/pull-request/<pr>")
+    def prInfo(proj: str, pr: str):
+        if pr in Service.jobs:
+            return flask.jsonify(Service.jobs[pr])
+        else:
+            builds = requests.get(
+                Service.builds + "?ref=refs/pull/%s/head" % pr).json()
+            if builds:
+                return flask.redirect(Service.build_page + builds[0]["uuid"])
 
     @app.route("/api/0/<proj>/pull-request/<pr>")
     @app.route("/api/0/<proj>/pull-request/<pr>/diffstats")
