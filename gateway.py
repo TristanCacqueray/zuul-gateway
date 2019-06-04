@@ -18,6 +18,7 @@ import time
 import uuid
 
 from hashlib import sha1
+from os import environ
 from typing import Dict, List
 from zlib import compress
 
@@ -25,6 +26,9 @@ import flask
 import requests
 
 app = flask.Flask(__name__)
+ZUUL_URL = environ.get("ZUUL_URL", "http://localhost:9000").rstrip('/')
+ZUUL_TENANT = environ.get("ZUUL_TENANT", "local")
+ZUUL_CONNECTION = environ.get("ZUUL_CONNECTION", "virtual")
 
 
 class VirtualGit:
@@ -79,9 +83,9 @@ class Service:
     git = VirtualGit()
     # token = "".join([random.choice(string.ascii_letters) for _ in range(34)])
     token = "WCL92MLWMRPGKBQ5LI0LZCSIS4TRQMHR0Q"
-    zuul = "http://localhost:9000/api/connection/virtual/payload"
-    builds = "http://localhost:9000/api/tenant/local/builds"
-    build_page = "http://localhost:9000/t/tenant/local/build/"
+    zuul = ZUUL_URL + "/api/connection/" + ZUUL_CONNECTION + "/payload"
+    builds = ZUUL_URL + "/api/tenant/" + ZUUL_TENANT + "/builds"
+    build_page = ZUUL_URL + "/t/" + ZUUL_TENANT + "/build/"
     project = "gateway"
     jobs = {}  # type: Dict[str, Dict[str, str]]
 
