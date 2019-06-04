@@ -159,7 +159,7 @@ class Service:
         elif flask.request.form and flask.request.form.get("comment"):
             Service.jobs[pr]["comment"] = flask.request.form["comment"]
         return flask.jsonify({"status": "Open", "branch": "master",
-                              "commit_stop": 1, "flags": None,
+                              "commit_stop": pr, "flags": None,
                               "zuul.yaml": "yes"})
 
     @app.route("/<path:subpath>", methods=['GET', 'POST', 'PUT'])
